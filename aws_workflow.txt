@@ -1,0 +1,5 @@
+1. user creates a IAM user
+2. connects to session
+3. creates ec2 instance
+
+4. enable automatic deployment

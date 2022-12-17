@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+flask-cors = "*"
+boto3 = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"
+
+[scripts]
+dev = "flask run"
+start = "gunicorn app:app"
+test = "pytest ."
+coverage = "pytest --cov-report term-missing --cov=."
