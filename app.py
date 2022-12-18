@@ -165,9 +165,33 @@ def ec_terminate_instances():
         ],
     )
     print(response)
-
     return jsonify({'message': result}), 200
 
+@app.route('/iam/new', methods=['POST'])
+def iam_new_user():
+
+    result = hellopy.hello_world()
+
+    iam = boto3.client('iam',
+         aws_access_key_id='AKIAUCXTXAAI4YYSLVRR',
+         aws_secret_access_key='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',
+         region_name='eu-west-2')
+
+    response = iam.create_user(
+    UserName='student7'
+    )
+
+    print(response['User'])
+
+    if response['User']['UserId']:
+        print(response['User']['UserId'])
+
+        response = iam.add_user_to_group(
+            GroupName='student',
+            UserName=response['User']['UserName'],
+        )
+
+    return jsonify({'message': result}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)

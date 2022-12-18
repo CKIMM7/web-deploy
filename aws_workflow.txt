@@ -1,5 +1,13 @@
 1. user creates a IAM user
-2. connects to session
-3. creates ec2 instance
+* which gives access to resouces like this
+
+    ec2 = boto3.resource('ec2',
+         aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
+         aws_secret_access_key='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',
+         region_name='eu-west-2')
+
+save this credentials to the user or on the server
+
+3. creates ec2 instance -> is where client will d
 
 4. enable automatic deployment
