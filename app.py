@@ -7,8 +7,6 @@ import hellopy
 import boto3
 
 ec2 = boto3.resource('ec2')
-
-
 app = Flask(__name__)
 CORS(app)
 
@@ -103,7 +101,7 @@ def ec_view_instances():
     for instance in ec2.instances.all():
         print(instance)
 
-        return jsonify({'message': result}), 200
+    return jsonify({'message': result}), 200
 
 
 @app.route('/ec2/instance/stop', methods=['POST'])
