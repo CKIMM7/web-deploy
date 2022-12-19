@@ -6,7 +6,7 @@ import pathlib
 import hellopy
 import boto3
 
-ec2 = boto3.resource('ec2')
+
 app = Flask(__name__)
 CORS(app)
 
