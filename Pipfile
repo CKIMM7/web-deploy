@@ -9,6 +9,8 @@ flask-cors = "*"
 boto3 = "*"
 gunicorn = "*"
 waitress = "*"
+flask-sqlalchemy = "*"
+flask-marshmallow = "*"
 
 [dev-packages]
 

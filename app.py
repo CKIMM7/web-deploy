@@ -1,14 +1,119 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+from flask_sqlalchemy import SQLAlchemy 
+from flask_marshmallow import Marshmallow 
+
 from werkzeug import exceptions
 from subprocess import Popen
 import pathlib
 import hellopy
 import boto3
 
+import os
 
 app = Flask(__name__)
+
+
+basedir = os.path.abspath(os.path.dirname(__file__))
 CORS(app)
+
+# Database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'db.sqlite')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Init db
+db = SQLAlchemy(app)
+# Init ma
+ma = Marshmallow(app)
+
+#User Class/Model
+class User(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  access_token = db.Column(db.String(100))
+  name = db.Column(db.String(100))
+  email = db.Column(db.String(100), unique=True)
+  guid = db.Column(db.String(100))
+  photo = db.Column(db.String(100))
+
+  def __init__(self, access_token, name, email, guid, photo):
+    self.access_token = access_token
+    self.name = name
+    self.email = email
+    self.guid = guid
+    self.photo = photo
+
+# User Schema
+class UserSchema(ma.Schema):
+  class Meta:
+    fields = ('id', 'access_token', 'name', 'email', 'guid', 'photo')
+
+# Init schema
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+
+
+@app.route('/user', methods=['POST'])
+def add_User():
+
+    access_token = request.json['data']['accessToken']
+    name = request.json['data']['displayName']
+    email = request.json['data']['email']
+    guid = request.json['data']['guid']
+    photo = request.json['data']['photo']
+
+    print(request.json['data'])
+
+    existing_user = User.query.filter_by(guid=guid).first()
+    if existing_user:
+
+        print('user alread exists')
+        print(existing_user)
+
+        return user_schema.jsonify(existing_user)
+    else:
+        new_user = User(access_token, name, email, guid, photo)
+        print('new user')
+        print(new_user)
+
+        db.session.add(new_user)
+        db.session.commit()
+        user_schema.jsonify(new_user)
+
+        #return 'success'
+        return user_schema.jsonify(new_user)
+
+
+@app.route('/users', methods=['GET'])
+def get_user():
+  all_users = User.query.all()
+  result = users_schema.dump(all_users)
+  print('get all users')
+  print(result)
+
+  return jsonify(result)
+
+
+@app.route('/products', methods=['POST'])
+def add_product():
+  name = request.json['name']
+  description = request.json['description']
+  price = request.json['price']
+  qty = request.json['qty']
+
+  new_product = Product(name, description, price, qty)
+
+  db.session.add(new_product)
+  db.session.commit()
+
+  return product_schema.jsonify(new_product)
+
+@app.route('/product', methods=['GET'])
+def get_products():
+  all_products = Product.query.all()
+  result = products_schema.dump(all_products)
+  print(result)
+
+  return jsonify(result)
 
 @app.route('/', methods=['GET'])
 def home():
