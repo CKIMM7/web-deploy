@@ -11,11 +11,15 @@ import hellopy
 import boto3
 
 import os
+from dotenv import load_dotenv
+
 
 app = Flask(__name__)
 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(dotenv_path='.env', verbose=True)
+
 CORS(app)
 
 # Database
@@ -34,18 +38,22 @@ class User(db.Model):
   email = db.Column(db.String(100), unique=True)
   guid = db.Column(db.String(100))
   photo = db.Column(db.String(100))
+  access_id = db.Column(db.String(100))
+  secret_id = db.Column(db.String(100))
 
-  def __init__(self, access_token, name, email, guid, photo):
+  def __init__(self, access_token, name, email, guid, photo, access_id, secret_id):
     self.access_token = access_token
     self.name = name
     self.email = email
     self.guid = guid
     self.photo = photo
+    self.access_id = access_id
+    self.secret_id = secret_id
 
 # User Schema
 class UserSchema(ma.Schema):
   class Meta:
-    fields = ('id', 'access_token', 'name', 'email', 'guid', 'photo')
+    fields = ('id', 'access_token', 'name', 'email', 'guid', 'photo', 'access_id', 'secret_id')
 
 # Init schema
 user_schema = UserSchema()
@@ -71,7 +79,7 @@ def add_User():
 
         return user_schema.jsonify(existing_user)
     else:
-        new_user = User(access_token, name, email, guid, photo)
+        new_user = User(access_token, name, email, guid, photo, '', '')
         print('new user')
         print(new_user)
 
@@ -79,7 +87,6 @@ def add_User():
         db.session.commit()
         user_schema.jsonify(new_user)
 
-        #return 'success'
         return user_schema.jsonify(new_user)
 
 
@@ -93,28 +100,6 @@ def get_user():
   return jsonify(result)
 
 
-@app.route('/products', methods=['POST'])
-def add_product():
-  name = request.json['name']
-  description = request.json['description']
-  price = request.json['price']
-  qty = request.json['qty']
-
-  new_product = Product(name, description, price, qty)
-
-  db.session.add(new_product)
-  db.session.commit()
-
-  return product_schema.jsonify(new_product)
-
-@app.route('/product', methods=['GET'])
-def get_products():
-  all_products = Product.query.all()
-  result = products_schema.dump(all_products)
-  print(result)
-
-  return jsonify(result)
-
 @app.route('/', methods=['GET'])
 def home():
 
@@ -122,6 +107,56 @@ def home():
     print(request.method)
     pathlib.Path(__file__).parent.resolve()
     return jsonify({'message': 'Hello from Flask!'}), 200
+
+admin_aws_access_key_id=os.getenv('admin_aws_access_key_id')
+admin_aws_secret_access_key=os.getenv('admin_aws_secret_access_key')
+
+@app.route('/iam/new', methods=['POST'])
+def iam_new_user():
+
+    #'admin:AKIAUCXTXAAI4YYSLVRR'
+    #'280757731345'
+    print('admin:AKIAUCXTXAAI4YYSLVRR')
+    print(request.json['name'].replace(" ", "_").lower())
+    result = hellopy.hello_world()
+
+    iam = boto3.client('iam',
+         aws_access_key_id=admin_aws_access_key_id,
+         aws_secret_access_key=admin_aws_secret_access_key,
+         region_name='eu-west-2')
+
+    #create user  
+    response = iam.create_user(
+    UserName= request.json['name'].replace(" ", "_").lower()
+    )
+    ##save to IAM_user data to database
+    print(response['User'])
+
+
+    #save access key  
+    response1 = iam.create_access_key(
+        UserName=response['User']['UserName']
+    )
+    ##save to IAM_user access/secret to database
+    print('after key creation')
+    print(response1)
+
+    AccessKeyId = response1['AccessKeyId']
+    SecretAccessKey = response1['SecretAccessKey']
+
+    #add user to group
+    if response['User']['UserId']:
+        print(response['User']['UserId'])
+
+        response = iam.add_user_to_group(
+            GroupName='student',
+            UserName=response['User']['UserName']
+        )
+        print('after group creation')
+        print(response)
+
+    return jsonify({'message': result}), 200
+
 
 @app.route('/bucket', methods=['POST'])
 def bucket():
@@ -270,31 +305,7 @@ def ec_terminate_instances():
     print(response)
     return jsonify({'message': result}), 200
 
-@app.route('/iam/new', methods=['POST'])
-def iam_new_user():
 
-    result = hellopy.hello_world()
-
-    iam = boto3.client('iam',
-         aws_access_key_id='AKIAUCXTXAAI4YYSLVRR',
-         aws_secret_access_key='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',
-         region_name='eu-west-2')
-
-    response = iam.create_user(
-    UserName='student7'
-    )
-
-    print(response['User'])
-
-    if response['User']['UserId']:
-        print(response['User']['UserId'])
-
-        response = iam.add_user_to_group(
-            GroupName='student',
-            UserName=response['User']['UserName'],
-        )
-
-    return jsonify({'message': result}), 200
 
 if __name__ == "__main__":
     app.run(debug=True)

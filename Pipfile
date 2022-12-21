@@ -11,6 +11,7 @@ gunicorn = "*"
 waitress = "*"
 flask-sqlalchemy = "*"
 flask-marshmallow = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
