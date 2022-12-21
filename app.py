@@ -40,8 +40,9 @@ class User(db.Model):
   photo = db.Column(db.String(100))
   access_id = db.Column(db.String(100))
   secret_id = db.Column(db.String(100))
+  instance_id = db.Column(db.String(100))
 
-  def __init__(self, access_token, name, email, guid, photo, access_id, secret_id):
+  def __init__(self, access_token, name, email, guid, photo, access_id, secret_id, instance_id):
     self.access_token = access_token
     self.name = name
     self.email = email
@@ -49,11 +50,12 @@ class User(db.Model):
     self.photo = photo
     self.access_id = access_id
     self.secret_id = secret_id
+    self.instance_id = instance_id
 
 # User Schema
 class UserSchema(ma.Schema):
   class Meta:
-    fields = ('id', 'access_token', 'name', 'email', 'guid', 'photo', 'access_id', 'secret_id')
+    fields = ('id', 'access_token', 'name', 'email', 'guid', 'photo', 'access_id', 'secret_id', 'instance_id')
 
 # Init schema
 user_schema = UserSchema()
@@ -79,7 +81,7 @@ def add_User():
 
         return user_schema.jsonify(existing_user)
     else:
-        new_user = User(access_token, name, email, guid, photo, '', '')
+        new_user = User(access_token, name, email, guid, photo, '', '', '')
         print('new user')
         print(new_user)
 
@@ -199,42 +201,21 @@ def bucket():
     for bucket in s3.buckets.all():
         print(bucket.name)
 
-    # s3 = boto3.resource('s3')
-    # for bucket in s3.buckets.all():
-    #     print(bucket.name)
-
-    # instances = ec2.create_instances(
-    #         ImageId="ami-0b0ea68c435eb488",
-    #         MinCount=1,
-    #         MaxCount=1,
-    #         InstanceType="t2.micro",
-    #         KeyName="KeyPair1"
-    #     )
-
-    # print(instances)
-
-    # p = Popen("hello.bat", cwd=path)
-    # stdout, stderr = p.communicate()
-
-    # print(stdout)
-    # print(stderr)
-
     return jsonify({'message': result}), 200
 
-@app.route('/ec2', methods=['POST'])
+@app.route('/ec2/create', methods=['POST'])
 def ec():
 
-    print('request.method')
-    print(request.method)
-    path =  pathlib.Path(__file__).parent.resolve()
-    print(path)
     result = hellopy.hello_world()
 
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    print('user to filter out for EC2 Views')
+    print(existing_user)
+
     ec2 = boto3.resource('ec2',
-         aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
-         aws_secret_access_key='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',
-         region_name='eu-west-2'
-         )
+         aws_access_key_id=existing_user.access_id,
+         aws_secret_access_key=existing_user.secret_id,
+         region_name='eu-west-2')
 
     print(ec2)
 
@@ -243,40 +224,61 @@ def ec():
             MinCount=1,
             MaxCount=1,
             InstanceType="t2.micro",
-            KeyName="KeyPair1"
+            KeyName="KeyPair1",
+            SecurityGroupIds=[
+            'sg-0f6e6789ff4e7e7c1',
+            ],
         )
 
-    print(instance)
+    print('successfully lauched an instance save it to User db')
+    print(instance[0].id)
+    existing_user.instance_id = instance[0].id
+    db.session.commit()
+    print(type(instance[0]))
 
     return jsonify({'message': result}), 200
 
-@app.route('/ec2/instances', methods=['GET'])
+@app.route('/ec2/instances', methods=['POST'])
 def ec_view_instances():
+    print('what?')
 
-    result = hellopy.hello_world()
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    print('user to filter out for EC2 Views')
+    print(existing_user)
+
     ec2 = boto3.resource('ec2',
-         aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
-         aws_secret_access_key='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',
+         aws_access_key_id=existing_user.access_id,
+         aws_secret_access_key=existing_user.secret_id,
          region_name='eu-west-2')
     
     for instance in ec2.instances.all():
+        #save this instance to User
         print(instance)
+
+    result = hellopy.hello_world()
+
 
     return jsonify({'message': result}), 200
 
 
-@app.route('/ec2/instance/stop', methods=['POST'])
+@app.route('/ec2/stop', methods=['POST'])
 def ec_stop_instances():
+
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    print('user to filter out to stop ec2')
+    print(existing_user)
 
     result = hellopy.hello_world()
     ec2 = boto3.client('ec2',
-         aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
-         aws_secret_access_key='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',
+
+         aws_access_key_id=existing_user.access_id,
+         aws_secret_access_key=existing_user.secret_id,
+
          region_name='eu-west-2')
     
     response = ec2.stop_instances(
         InstanceIds=[
-            'i-0b26f473cc31c5104',
+            existing_user.instance_id,
         ],
         Hibernate=False,
         DryRun=False,
@@ -287,18 +289,22 @@ def ec_stop_instances():
 
     return jsonify({'message': result}), 200
 
-@app.route('/ec2/instance/start', methods=['POST'])
+@app.route('/ec2/start', methods=['POST'])
 def ec_start_instances():
+
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    print('user to filter out to stop ec2')
+    print(existing_user)
 
     result = hellopy.hello_world()
     ec2 = boto3.client('ec2',
-         aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
-         aws_secret_access_key='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',
+         aws_access_key_id=existing_user.access_id,
+         aws_secret_access_key=existing_user.secret_id,
          region_name='eu-west-2')
     
     response = ec2.start_instances(
         InstanceIds=[
-            'i-0b26f473cc31c5104',
+            existing_user.instance_id,
         ],
         AdditionalInfo='string',
         DryRun=False
