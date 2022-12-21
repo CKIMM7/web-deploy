@@ -114,6 +114,15 @@ admin_aws_secret_access_key=os.getenv('admin_aws_secret_access_key')
 @app.route('/iam/new', methods=['POST'])
 def iam_new_user():
 
+    #get guid and start session
+
+    print(request.json)
+
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    print('user to filter out for IAM Account Creation')
+    print(existing_user)
+
+
     #'admin:AKIAUCXTXAAI4YYSLVRR'
     #'280757731345'
     print('admin:AKIAUCXTXAAI4YYSLVRR')
@@ -131,18 +140,24 @@ def iam_new_user():
     )
     ##save to IAM_user data to database
     print(response['User'])
-
+    
 
     #save access key  
     response1 = iam.create_access_key(
         UserName=response['User']['UserName']
     )
+
+
+
     ##save to IAM_user access/secret to database
     print('after key creation')
     print(response1)
 
-    AccessKeyId = response1['AccessKeyId']
-    SecretAccessKey = response1['SecretAccessKey']
+    AccessKeyId = response1['AccessKey']['AccessKeyId']
+    SecretAccessKey = response1['AccessKey']['SecretAccessKey']
+    print('AccessKeyId''AccessKeyId''AccessKeyId')
+    print(AccessKeyId)
+    print(SecretAccessKey)
 
     #add user to group
     if response['User']['UserId']:
@@ -155,7 +170,13 @@ def iam_new_user():
         print('after group creation')
         print(response)
 
+    existing_user.access_id = AccessKeyId
+    existing_user.secret_id = SecretAccessKey
+    db.session.commit()
+
     return jsonify({'message': result}), 200
+
+
 
 
 @app.route('/bucket', methods=['POST'])
