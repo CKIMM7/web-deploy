@@ -207,41 +207,45 @@ def bucket():
 @app.route('/ec2/create', methods=['POST'])
 def ec():
 
-    result = hellopy.hello_world()
-
     existing_user = User.query.filter_by(guid=request.json['guid']).first()
     print('user to filter out for EC2 Views')
     print(existing_user)
 
-    ec2 = boto3.resource('ec2',
-         aws_access_key_id=existing_user.access_id,
-         aws_secret_access_key=existing_user.secret_id,
-         region_name='eu-west-2')
+    try:
+        ec2 = boto3.resource('ec2',
+            aws_access_key_id=existing_user.access_id,
+            aws_secret_access_key=existing_user.secret_id,
+            region_name='eu-west-2')
 
-    print(ec2)
+        print(ec2)
 
-    instance = ec2.create_instances(
-            ImageId="ami-084e8c05825742534",
-            MinCount=1,
-            MaxCount=1,
-            InstanceType="t2.micro",
-            KeyName="KeyPair1",
-            SecurityGroupIds=[
-            'sg-0f6e6789ff4e7e7c1',
-            ],
-        )
+        instance = ec2.create_instances(
+                ImageId="ami-084e8c05825742534",
+                MinCount=1,
+                MaxCount=1,
+                InstanceType="t2.micro",
+                KeyName="KeyPair1",
+                SecurityGroupIds=[
+                'sg-0f6e6789ff4e7e7c1',
+                ],
+            )
 
-    print('successfully lauched an instance save it to User db')
-    print(instance[0].id)
-    existing_user.instance_id = instance[0].id
-    db.session.commit()
-    print(type(instance[0]))
+        print('successfully lauched an instance save it to User db')
+        print(instance)
+        print(instance[0].id)
+        existing_user.instance_id = instance[0].id
+        db.session.commit()
 
-    return jsonify({'message': result}), 200
+        return jsonify({'message': 'your ec2 has been created'}), 200
+
+    except Exception as e:
+        print('error messag')
+        print(str(e))
+        return jsonify({'message': str(e)}), 400
 
 @app.route('/ec2/instances', methods=['POST'])
 def ec_view_instances():
-    print('what?')
+    instance_list = []
 
     existing_user = User.query.filter_by(guid=request.json['guid']).first()
     print('user to filter out for EC2 Views')
@@ -253,13 +257,12 @@ def ec_view_instances():
          region_name='eu-west-2')
     
     for instance in ec2.instances.all():
-        #save this instance to User
-        print(instance)
+        instance_list.append(instance.id)
+        print(instance.id)
 
-    result = hellopy.hello_world()
+    print(instance_list)
 
-
-    return jsonify({'message': result}), 200
+    return jsonify({'message': instance_list}), 200
 
 
 @app.route('/ec2/stop', methods=['POST'])
