@@ -7,8 +7,9 @@
     #     print(instance)
 
 
-cmds used for dev
--
+linux cmds used for dev
+- sudo lsof -i -P -n | grep LISTEN
+
 
 
 

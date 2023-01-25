@@ -211,7 +211,40 @@ def ec():
     print(existing_user)
 
     user_data_script = """#!/bin/bash
-        echo "Hello World" >> /tmp/data.txt"""      
+        # Enable logs
+        exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+        # Install Git
+        echo "Installing Git"
+        yum update -y
+        yum install git -y
+
+        # Install NodeJS
+        echo "Installing NodeJS"
+        yum install -y gcc-c++ make
+        curl -sL https://rpm.nodesource.com/setup_16.x | sudo -E bash -
+        yum install -y nodejs
+
+        # Clone website code
+        echo "Cloning website"
+        mkdir -p /demo-website
+        cd /demo-website
+        git clone https://github.com/CKIMM7/custom_search_engine.git .
+
+        # Install dependencies
+        echo "Installing dependencies"
+        npm install
+
+        # Forward port 80 traffic to port 4000
+        echo "Forwarding 80 -> 4000"
+        iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 4000
+        # iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 4000
+
+        # Install & use pm2 to run Node app in background
+        echo "Installing & starting pm2"
+        npm install pm2@latest -g
+        pm2 start app.js
+        """      
 
     try:
         ec2 = boto3.resource('ec2',
