@@ -82,8 +82,8 @@ def add_User():
         return user_schema.jsonify(existing_user)
     else:
         new_user = User(access_token, name, email, guid, photo, '', '', '')
-        print('new user')
-        print(new_user)
+        #print('new user')
+        #print(new_user)
 
         db.session.add(new_user)
         db.session.commit()
@@ -117,69 +117,70 @@ admin_aws_secret_access_key=os.getenv('admin_aws_secret_access_key')
 def iam_new_user():
 
     #get guid and start session
+    #print(request.json)
 
-    print(request.json)
-
+    print('user to filter out for IAM Accounts')
     existing_user = User.query.filter_by(guid=request.json['guid']).first()
-    print('user to filter out for IAM Account Creation')
-    print(existing_user)
 
 
-    #'admin:AKIAUCXTXAAI4YYSLVRR'
-    #'280757731345'
-    print('admin:AKIAUCXTXAAI4YYSLVRR')
-    print(request.json['name'].replace(" ", "_").lower())
-    result = hellopy.hello_world()
-
+    #authenticat with admin permissions
     iam = boto3.client('iam',
-         aws_access_key_id=admin_aws_access_key_id,
-         aws_secret_access_key=admin_aws_secret_access_key,
-         region_name='eu-west-2')
+        aws_access_key_id=admin_aws_access_key_id,
+        aws_secret_access_key=admin_aws_secret_access_key,
+        region_name='eu-west-2')
 
-    #create user  
-    response = iam.create_user(
-    UserName= request.json['name'].replace(" ", "_").lower()
-    )
-    ##save to IAM_user data to database
-    print(response['User'])
-    
-
-    #save access key  
-    response1 = iam.create_access_key(
-        UserName=response['User']['UserName']
-    )
-
-
-
-    ##save to IAM_user access/secret to database
-    print('after key creation')
-    print(response1)
-
-    AccessKeyId = response1['AccessKey']['AccessKeyId']
-    SecretAccessKey = response1['AccessKey']['SecretAccessKey']
-    print('AccessKeyId''AccessKeyId''AccessKeyId')
-    print(AccessKeyId)
-    print(SecretAccessKey)
-
-    #add user to group
-    if response['User']['UserId']:
-        print(response['User']['UserId'])
-
-        response = iam.add_user_to_group(
-            GroupName='student',
-            UserName=response['User']['UserName']
+        #create user  
+    try:
+        response = iam.create_user(
+        UserName= request.json['name'].replace(" ", "_").lower()
         )
-        print('after group creation')
+
         print(response)
 
-    existing_user.access_id = AccessKeyId
-    existing_user.secret_id = SecretAccessKey
-    db.session.commit()
+        #save access key of newly created user
+        response1 = iam.create_access_key(
+            UserName=response['User']['UserName']
+        )
 
-    return jsonify({'message': result}), 200
+        ##save to IAM_user access/secret to database
+        #print('after key creation')
+        #print(response1)
 
+        AccessKeyId = response1['AccessKey']['AccessKeyId']
+        SecretAccessKey = response1['AccessKey']['SecretAccessKey']
+        #print('AccessKeyId''AccessKeyId''AccessKeyId')
+        #print(AccessKeyId)
+        #print(SecretAccessKey)
 
+            #add user to group
+        if response['User']['UserId']:
+            print(response['User']['UserId'])
 
+            response = iam.add_user_to_group(
+                GroupName='student',
+                UserName=response['User']['UserName']
+            )
+            #print('after group creation')
+            #print(response)
+
+        existing_user.access_id = AccessKeyId
+        existing_user.secret_id = SecretAccessKey
+        db.session.commit()
+
+        existing_user_IAM = User.query.filter_by(guid=request.json['guid']).first()
+
+        new_IAM_user = {'accessId': existing_user_IAM.access_id,
+                        'secreId': existing_user.secret_id
+                        }
+
+        return jsonify({'message': 'user has been succesfully created',
+                        'userData': new_IAM_user}), 200
+
+    except Exception as e:
+        print('error messag')
+        print(str(e))
+        return jsonify({'message': str(e)}), 400
+    
 
 @app.route('/bucket', methods=['POST'])
 def bucket():
