@@ -61,7 +61,6 @@ class UserSchema(ma.Schema):
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 
-
 @app.route('/user', methods=['POST'])
 def add_User():
 
@@ -211,6 +210,9 @@ def ec():
     print('user to filter out for EC2 Views')
     print(existing_user)
 
+    user_data_script = """#!/bin/bash
+        echo "Hello World" >> /tmp/data.txt"""      
+
     try:
         ec2 = boto3.resource('ec2',
             aws_access_key_id=existing_user.access_id,
@@ -228,6 +230,7 @@ def ec():
                 SecurityGroupIds=[
                 'sg-0f6e6789ff4e7e7c1',
                 ],
+                UserData=user_data_script
             )
 
         print('successfully lauched an instance save it to User db')
@@ -236,7 +239,7 @@ def ec():
         existing_user.instance_id = instance[0].id
         db.session.commit()
 
-        return jsonify({'message': 'your ec2 has been created'}), 200
+        return jsonify({'message': instance[0].id }), 200
 
     except Exception as e:
         print('error messag')
