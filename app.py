@@ -205,12 +205,13 @@ def bucket():
 
 @app.route('/ec2/create', methods=['POST'])
 def ec():
-
-    existing_user = User.query.filter_by(guid=request.json['guid']).first()
     print('user to filter out for EC2 Views')
-    print(existing_user)
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    
+    print(request.json['repo'])
+    
 
-    user_data_script = """#!/bin/bash
+    user_data_script = f"""#!/bin/bash
         # Enable logs
         exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
@@ -229,7 +230,7 @@ def ec():
         echo "Cloning website"
         mkdir -p /demo-website
         cd /demo-website
-        git clone https://github.com/CKIMM7/custom_search_engine.git .
+        git clone {request.json['repo']} .
 
         # Install dependencies
         echo "Installing dependencies"
