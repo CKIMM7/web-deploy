@@ -1,17 +1,25 @@
-#
-readme here
-deploy your app on aws infrastructure without a hastle.
+# Project Title
+- WebDeploy
 
-this should be deployed on a public ip address as a standalone server
-to talks to clients.
+# Tech Stack
+- Backend
+- Python
+- Flask
+- Flask-SQLAlchemy
+- AWS SDK: Boto3
 
-this is the backend.
-front end should be deployed seperately.
+- Frontend
+- React
+- Redux
+- Firebase
 
-aws endpoints <---> this server/backend  <---> client(react/firebase)
+# How to use this app
+- Go to https://web-deploy.netlify.app
+- Sign up with Google first
+- Create an AWS account
+- Seach for your Github repo (currently accepting only node applications)
+- Click on deploy button to deploy your application
+- Give it roughly 5 minutes
+- Copy and pase your public ip address in the url address bar
 
-workflow
 
-0. login with firebase or flask -> save token to backend/alchemy
-1. user creates a IAM user from frontend -> access to ec2 resouces ✓
-2. create ec2 instace put it on a public ip address -> is where client will deploy to
