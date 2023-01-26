@@ -280,6 +280,27 @@ def ec():
         print(str(e))
         return jsonify({'message': str(e)}), 400
 
+@app.route('/ec2/state', methods=['POST'])
+def ec_view_ec2state():
+
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    print('user to filter out for EC2 Views')
+    print(existing_user)
+
+    EC2_CLIENT = boto3.client('ec2',                                       
+        aws_access_key_id=existing_user.access_id,
+        aws_secret_access_key=existing_user.secret_id,
+        region_name='eu-west-2')    
+
+    response = EC2_CLIENT.describe_instances(
+    InstanceIds=[
+        existing_user.instance_id
+    ])
+
+    print(response)
+
+    return jsonify({'message': response}), 200
+
 @app.route('/ec2/instances', methods=['POST'])
 def ec_view_instances():
     instance_list = []
