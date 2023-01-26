@@ -76,8 +76,7 @@ def add_User():
     if existing_user:
 
         print('user alread exists')
-        print(existing_user)
-
+        
         return user_schema.jsonify(existing_user)
     else:
         new_user = User(access_token, name, email, guid, photo, '', '', '')
@@ -118,9 +117,10 @@ def iam_new_user():
     #get guid and start session
     #print(request.json)
 
-    print('user to filter out for IAM Accounts')
+    
     existing_user = User.query.filter_by(guid=request.json['guid']).first()
-
+    print('user to filter out for IAM Accounts')
+    # print(existing_user.access_id)
 
     #authenticat with admin permissions
     iam = boto3.client('iam',
@@ -207,7 +207,7 @@ def bucket():
 def ec():
     print('user to filter out for EC2 Views')
     existing_user = User.query.filter_by(guid=request.json['guid']).first()
-    
+
     print(request.json['repo'])
     
 
@@ -356,22 +356,24 @@ def ec_start_instances():
     return jsonify({'message': result}), 200
 
 
-@app.route('/ec2/instance/terminate', methods=['POST'])
+@app.route('/ec2/terminate', methods=['POST'])
 def ec_terminate_instances():
 
-    result = hellopy.hello_world()
+    existing_user = User.query.filter_by(guid=request.json['guid']).first()
     ec2 = boto3.client('ec2',
-         aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
-         aws_secret_access_key='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',
+         aws_access_key_id=existing_user.access_id,
+         aws_secret_access_key=existing_user.secret_id,
          region_name='eu-west-2')
          
     response = ec2.terminate_instances(
             InstanceIds=[
-            'i-0b26f473cc31c5104',
+            existing_user.instance_id,
         ],
     )
+
+
     print(response)
-    return jsonify({'message': result}), 200
+    return jsonify({'message': 'EC2 Terminated'}), 200
 
 
 
