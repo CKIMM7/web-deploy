@@ -22,4 +22,11 @@
 - Give it roughly 5 minutes
 - Copy and pase your public ip address in the url address bar
 
-
+# Future Features
+ - Support python applications
+ - Support Docker containers
+ - Provide Elastic Beanstalk
+ - Support S3 Bucket
+ - Multiple EC2 Creation
+ - Output Server/EC2 state 
+ - Let users choose EC2 images from AWS
