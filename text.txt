@@ -1,18 +1,21 @@
-    # ec2 = boto3.resource('ec2',
-    #      aws_access_key_id='AKIAUCXTXAAIXQCVARSC',
-    #      aws_secret_access_key='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',
-    #      region_name='eu-west-2')
-    
-    # for instance in ec2.instances.all():
-    #     print(instance)
-
-
 linux cmds used for dev
 - sudo lsof -i -P -n | grep LISTEN
 
 flask=SQLAlchemy commands used for dev
 - from app import db
 - db.create_all()
+
+database diagram
+https://app.diagrams.net/?src=about#G1aRQDRQwXtCaBLVGzSKa7Lmvan0tgaAke
+
+https://app.diagrams.net/?src=about#G1aRQDRQwXtCaBLVGzSKa7Lmvan0tgaAke
+
+ssh session
+- from aws itself from connect tab. private key file is need on my desktop
+- to see if a port is running for example 4000
+sudo ss -tulpn | grep LISTEN
+https://www.cyberciti.biz/faq/unix-linux-check-if-port-is-in-use-command/
+
 
 
 
