@@ -38,6 +38,9 @@ db = SQLAlchemy(app)
 # Init ma
 ma = Marshmallow(app)
 
+admin_aws_access_key_id = os.getenv('admin_aws_access_key_id')
+admin_aws_secret_access_key = os.getenv('admin_aws_secret_access_key')
+
 # User Class/Model
 
 
@@ -155,28 +158,34 @@ def add_User():
         print('return newly created')
         print(new_user)
 
-        p1 = Person(new_user[0], new_user[1],
-                    new_user[2], new_user[3], '', '')
+        p1 = Person(new_user[1], new_user[2],
+                    new_user[3], new_user[4], '', '')
         print(p1.__dict__)
 
         return jsonify({'message': p1.__dict__})
     else:
         # if some_user does exist
         print('user does exist')
-        p1 = Person(existing_user[0], existing_user[1],
-                    existing_user[2], existing_user[3], '', '')
+        p1 = Person(existing_user[1], existing_user[2],
+                    existing_user[3], existing_user[4], '', '')
         print(p1.__dict__)
         return jsonify({'message': p1.__dict__})
 
 
 @app.route('/users', methods=['GET'])
 def get_user():
-    all_users = User.query.all()
-    result = users_schema.dump(all_users)
-    print('get all users')
-    print(result)
+    new_list = []
+    cur.execute("SELECT * FROM users;")
+    return_data = cur.fetchall()
+    print(return_data)
 
-    return jsonify(result)
+    for i in return_data:
+        p1 = Person(i[1], i[2], i[3], i[4], '', '')
+        new_list.append(p1.__dict__)
+
+    print(new_list)
+
+    return jsonify({'message': new_list})
 
 
 @app.route('/', methods=['GET'])
@@ -186,10 +195,6 @@ def home():
     print(request.method)
     pathlib.Path(__file__).parent.resolve()
     return jsonify({'message': 'Hello from Flask!'}), 200
-
-
-admin_aws_access_key_id = os.getenv('admin_aws_access_key_id')
-admin_aws_secret_access_key = os.getenv('admin_aws_secret_access_key')
 
 
 @app.route('/iam/new', methods=['POST'])
