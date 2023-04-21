@@ -16,7 +16,7 @@ import os
 
 from json import JSONEncoder
 from dotenv import load_dotenv
-from db import conn, insert_user
+from db import conn, insert_user, update_user_iam
 
 
 app = Flask(__name__)
@@ -50,7 +50,8 @@ class MyEncoder(JSONEncoder):
 
 
 class Person:
-    def __init__(self, name, email, guid, photo, access_id, secret_id):
+    def __init__(self, id, name, email, guid, photo, access_id, secret_id):
+        self.id = id
         self.name = name
         self.email = email
         self.guid = guid
@@ -60,6 +61,7 @@ class Person:
 
     def __iter__(self):
         yield from {
+            "id": self.id,
             "name": self.name,
             "email": self.email,
             "guid": self.guid,
@@ -143,10 +145,7 @@ def add_User():
 
     cur.execute(f"SELECT * FROM users WHERE email = '{email}';")
     existing_user = cur.fetchone()
-    print(email)
     print(existing_user)
-
-    # if some_user exists
 
     if existing_user == None:
         # if some_user does not exist
@@ -158,18 +157,18 @@ def add_User():
         print('return newly created')
         print(new_user)
 
-        p1 = Person(new_user[1], new_user[2],
+        p1 = Person(new_user[0], new_user[1], new_user[2],
                     new_user[3], new_user[4], '', '')
         print(p1.__dict__)
 
-        return jsonify({'message': p1.__dict__})
+        return jsonify({'user': p1.__dict__, 'status': 'new user'})
     else:
         # if some_user does exist
         print('user does exist')
-        p1 = Person(existing_user[1], existing_user[2],
+        p1 = Person(existing_user[0], existing_user[1], existing_user[2],
                     existing_user[3], existing_user[4], '', '')
         print(p1.__dict__)
-        return jsonify({'message': p1.__dict__})
+        return jsonify({'user': p1.__dict__, 'status': 'existing user'})
 
 
 @app.route('/users', methods=['GET'])
@@ -180,12 +179,12 @@ def get_user():
     print(return_data)
 
     for i in return_data:
-        p1 = Person(i[1], i[2], i[3], i[4], '', '')
+        p1 = Person(i[0], i[1], i[2], i[3], i[4], i[5], i[6])
         new_list.append(p1.__dict__)
 
     print(new_list)
 
-    return jsonify({'message': new_list})
+    return jsonify({'users': new_list})
 
 
 @app.route('/', methods=['GET'])
@@ -203,9 +202,13 @@ def iam_new_user():
     # get guid and start session
     # print(request.json)
 
-    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+    # existing_user = User.query.filter_by(guid=request.json['guid']).first()
     print('user to filter out for IAM Accounts')
-    # print(existing_user.access_id)
+
+    guid = request.json['guid']
+    cur.execute(f"SELECT * FROM users WHERE email = '{guid}';")
+    existing_user = cur.fetchone()
+    print(existing_user)
 
     # authenticat with admin permissions
     iam = boto3.client('iam',
@@ -246,19 +249,18 @@ def iam_new_user():
             # print('after group creation')
             # print(response)
 
-        existing_user.access_id = AccessKeyId
-        existing_user.secret_id = SecretAccessKey
-        db.session.commit()
+        # existing_user.access_id = AccessKeyId
+        # existing_user.secret_id = SecretAccessKey
+        # db.session.commit()
 
-        existing_user_IAM = User.query.filter_by(
-            guid=request.json['guid']).first()
-
-        new_IAM_user = {'accessId': existing_user_IAM.access_id,
-                        'secreId': existing_user.secret_id
-                        }
-
-        return jsonify({'message': 'user has been succesfully created',
-                        'userData': new_IAM_user}), 200
+        update_user_iam(AccessKeyId, SecretAccessKey, guid)
+        cur.execute(f"SELECT * FROM users WHERE guid = '{guid}';")
+        existing_user = cur.fetchone()
+        print('existing_user after update')
+        p1 = Person(existing_user[0], existing_user[1], existing_user[2],
+                    existing_user[3], existing_user[4], existing_user[5], existing_user[6])
+        print(p1.__dict__)
+        return jsonify({'user': p1.__dict__}), 200
 
     except Exception as e:
         print('error messag')

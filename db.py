@@ -26,16 +26,22 @@ try:
 except psycopg2.Error as e:
     print(e.pgcode)
 
-cur.execute("INSERT INTO users (name, email, guid, photo, access_id, secret_id) VALUES (%s, %s, %s, %s, %s, %s)",
-            ('kim1', 'kim@gmail.com', 'guid', 'photo', '', ''))
+# cur.execute("INSERT INTO users (name, email, guid, photo, access_id, secret_id) VALUES (%s, %s, %s, %s, %s, %s)",
+#             ('kim1', 'kim@gmail.com', 'guid', 'photo', '', ''))
 
-cur.execute("INSERT INTO users (name, email, guid, photo, access_id, secret_id) VALUES (%s, %s, %s, %s, %s, %s)",
-            ('eve', 'eve@gmail.com', 'guid1', 'photo1', '', ''))
+# cur.execute("INSERT INTO users (name, email, guid, photo, access_id, secret_id) VALUES (%s, %s, %s, %s, %s, %s)",
+#             ('eve', 'eve@gmail.com', 'guid1', 'photo1', '', ''))
 
 
 def insert_user(name, email, guid, photo, access_id, secret_id):
     cur.execute("INSERT INTO users (name, email, guid, photo, access_id, secret_id) VALUES (%s, %s, %s, %s, %s, %s)",
                 (name, email, guid, photo, '', ''))
+    conn.commit()
+
+
+def update_user_iam(access_id, secret_id, guid):
+    sql = """ UPDATE users SET access_id = %s, secret_id = %s WHERE guid = %s"""
+    cur.execute(sql, (access_id, secret_id, guid))
     conn.commit()
 
 
