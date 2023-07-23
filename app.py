@@ -136,6 +136,7 @@ db.create_all()
 
 @app.route('/user', methods=['POST'])
 def add_User():
+    print('/user post')
 
     access_token = request.json['data']['accessToken']
     name = request.json['data']['displayName']
@@ -143,15 +144,16 @@ def add_User():
     guid = request.json['data']['guid']
     photo = request.json['data']['photo']
 
-    cur.execute(f"SELECT * FROM users WHERE email = '{email}';")
+    cur.execute(f"SELECT * FROM customers WHERE customer_email = '{email}';")
     existing_user = cur.fetchone()
     print(existing_user)
 
     if existing_user == None:
         # if some_user does not exist
-        print('user does not exist')
+        print('user does not exist, creating user')
         insert_user(name, email, guid, photo,  '', '')
-        cur.execute(f"SELECT * FROM users WHERE email = '{email}';")
+        cur.execute(
+            f"SELECT * FROM customers WHERE customer_email = '{email}';")
         new_user = cur.fetchone()
 
         print('return newly created')
@@ -206,7 +208,7 @@ def iam_new_user():
     print('user to filter out for IAM Accounts')
 
     guid = request.json['guid']
-    cur.execute(f"SELECT * FROM users WHERE email = '{guid}';")
+    cur.execute(f"SELECT * FROM customers WHERE customer_name = '{guid}';")
     existing_user = cur.fetchone()
     print(existing_user)
 
@@ -254,7 +256,7 @@ def iam_new_user():
         # db.session.commit()
 
         update_user_iam(AccessKeyId, SecretAccessKey, guid)
-        cur.execute(f"SELECT * FROM users WHERE guid = '{guid}';")
+        cur.execute(f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
         existing_user = cur.fetchone()
         print('existing_user after update')
         p1 = Person(existing_user[0], existing_user[1], existing_user[2],
@@ -293,8 +295,15 @@ def bucket():
 
 @app.route('/ec2/create', methods=['POST'])
 def ec():
-    print('user to filter out for EC2 Views')
-    existing_user = User.query.filter_by(guid=request.json['guid']).first()
+
+    guid = request.json['guid']
+    cur.execute(
+        f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
+    customer_aws_credentials = cur.fetchone()
+    print('fetch all customer credentials')
+    print(customer_aws_credentials)
+    print(customer_aws_credentials[5])
+    print(customer_aws_credentials[6])
 
     print(request.json['repo'])
 
@@ -336,8 +345,8 @@ def ec():
 
     try:
         ec2 = boto3.resource('ec2',
-                             aws_access_key_id=existing_user.access_id,
-                             aws_secret_access_key=existing_user.secret_id,
+                             aws_access_key_id=customer_aws_credentials[5],
+                             aws_secret_access_key=customer_aws_credentials[6],
                              region_name='eu-west-2')
 
         instance = ec2.create_instances(
@@ -356,13 +365,15 @@ def ec():
         print(instance)
         print(f"{instance[0].id}")
 
-        ec2 = Ec2(instance_id=str(instance[0].id), user_id=existing_user.email)
-        db.session.add(ec2)
-        db.session.commit()
+        cur.execute("INSERT INTO ec2s (customer_id, ec2_name) VALUES (%s, %s)",
+                    (customer_aws_credentials[0], f"{instance[0].id}"))
+        conn.commit()
 
-        print('pritn ec2')
-        print(ec2)
-        print(existing_user.ec2_instances)
+        cur.execute(
+            """SELECT customers.customer_id, customers.customer_name, ec2_name FROM customers INNER JOIN ec2s ON ec2s.customer_id = customers.customer_id WHERE customers.customer_email = 'dyounggkim@gmail.com';""")
+        join_sql_kim = cur.fetchall()
+        print(join_sql_kim)
+
         return jsonify({'message': "ec2"}), 200
 
     except Exception as e:
