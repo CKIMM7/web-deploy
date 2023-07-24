@@ -134,43 +134,13 @@ db.drop_all()
 db.create_all()
 
 
-@app.route('/user', methods=['POST'])
-def add_User():
-    print('/user post')
+@app.route('/', methods=['GET'])
+def home():
 
-    access_token = request.json['data']['accessToken']
-    name = request.json['data']['displayName']
-    email = request.json['data']['email']
-    guid = request.json['data']['guid']
-    photo = request.json['data']['photo']
-
-    cur.execute(f"SELECT * FROM customers WHERE customer_email = '{email}';")
-    existing_user = cur.fetchone()
-    print(existing_user)
-
-    if existing_user == None:
-        # if some_user does not exist
-        print('user does not exist, creating user')
-        insert_user(name, email, guid, photo,  '', '')
-        cur.execute(
-            f"SELECT * FROM customers WHERE customer_email = '{email}';")
-        new_user = cur.fetchone()
-
-        print('return newly created')
-        print(new_user)
-
-        p1 = Person(new_user[0], new_user[1], new_user[2],
-                    new_user[3], new_user[4], '', '')
-        print(p1.__dict__)
-
-        return jsonify({'user': p1.__dict__, 'status': 'new user'})
-    else:
-        # if some_user does exist
-        print('user does exist')
-        p1 = Person(existing_user[0], existing_user[1], existing_user[2],
-                    existing_user[3], existing_user[4], '', '')
-        print(p1.__dict__)
-        return jsonify({'user': p1.__dict__, 'status': 'existing user'})
+    print('request.method')
+    print(request.method)
+    pathlib.Path(__file__).parent.resolve()
+    return jsonify({'message': 'Hello from Flask!'}), 200
 
 
 @app.route('/users', methods=['GET'])
@@ -189,23 +159,60 @@ def get_user():
     return jsonify({'users': new_list})
 
 
-@app.route('/', methods=['GET'])
-def home():
+@app.route('/user', methods=['POST'])
+def add_User():
+    print('/user post')
 
-    print('request.method')
-    print(request.method)
-    pathlib.Path(__file__).parent.resolve()
-    return jsonify({'message': 'Hello from Flask!'}), 200
+    access_token = request.json['data']['accessToken']
+    name = request.json['data']['displayName']
+    email = request.json['data']['email']
+    guid = request.json['data']['guid']
+    photo = request.json['data']['photo']
+
+    # look into iam not my own database
+
+    cur.execute(f"SELECT * FROM customers WHERE customer_email = '{email}';")
+    existing_user = cur.fetchone()
+    print(existing_user)
+
+    if existing_user == None:
+        # if some_user does not exist
+        print('user does not exist, creating user')
+        insert_user(name, email, guid, photo,  '', '')
+        cur.execute(
+            f"SELECT * FROM customers WHERE customer_email = '{email}';")
+        new_user = cur.fetchone()
+
+        print('return newly created')
+        print(new_user)
+
+        p1 = Person(new_user[0], new_user[1], new_user[2],
+                    new_user[3], new_user[4], new_user[5], new_user[6])
+        print(p1.__dict__)
+
+        return jsonify({'user': p1.__dict__, 'status': 'new user'})
+    else:
+        # if some_user does exist
+        print('user does exist')
+
+        iam = boto3.client('iam',
+                           aws_access_key_id=admin_aws_access_key_id,
+                           aws_secret_access_key=admin_aws_secret_access_key,
+                           region_name='eu-west-2')
+
+        # response = iam.get_user(
+        #     UserName='Dong_Young_Kim')
+
+        # print(response)
+
+        p1 = Person(existing_user[0], existing_user[1], existing_user[2],
+                    existing_user[3], existing_user[4], existing_user[5], existing_user[6])
+        print(p1.__dict__)
+        return jsonify({'user': p1.__dict__, 'status': 'existing user'})
 
 
 @app.route('/iam/new', methods=['POST'])
 def iam_new_user():
-
-    # get guid and start session
-    # print(request.json)
-
-    # existing_user = User.query.filter_by(guid=request.json['guid']).first()
-    print('user to filter out for IAM Accounts')
 
     guid = request.json['guid']
     cur.execute(f"SELECT * FROM customers WHERE customer_name = '{guid}';")
@@ -251,10 +258,6 @@ def iam_new_user():
             # print('after group creation')
             # print(response)
 
-        # existing_user.access_id = AccessKeyId
-        # existing_user.secret_id = SecretAccessKey
-        # db.session.commit()
-
         update_user_iam(AccessKeyId, SecretAccessKey, guid)
         cur.execute(f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
         existing_user = cur.fetchone()
@@ -263,6 +266,58 @@ def iam_new_user():
                     existing_user[3], existing_user[4], existing_user[5], existing_user[6])
         print(p1.__dict__)
         return jsonify({'user': p1.__dict__}), 200
+
+    except Exception as e:
+        print('error messag')
+        print(str(e))
+        return jsonify({'message': str(e)}), 400
+
+
+@app.route('/iam/delete_key', methods=['POST'])
+def iam_delete_access_key():
+    print('/iam/delete_key')
+
+    guid = request.json['guid']
+    print(guid)
+    cur.execute(f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
+    existing_user = cur.fetchone()
+
+    print(existing_user[1].replace(" ", "_").lower())
+
+    # authenticat with admin permissions
+    iam = boto3.client('iam',
+                       aws_access_key_id=admin_aws_access_key_id,
+                       aws_secret_access_key=admin_aws_secret_access_key,
+                       region_name='eu-west-2')
+
+    try:
+        access_key_response = iam.delete_access_key(
+            UserName=existing_user[1].replace(" ", "_").lower(),
+            AccessKeyId=existing_user[5])
+        print(access_key_response)
+
+        if access_key_response:
+
+            remove_user_from_group_response = iam.remove_user_from_group(
+                GroupName='student',
+                UserName=existing_user[1].replace(" ", "_").lower()
+            )
+            print(remove_user_from_group_response)
+
+            if remove_user_from_group_response:
+                delete_user_response = iam.delete_user(
+                    UserName=existing_user[1].replace(" ", "_").lower()
+                )
+                print(delete_user_response)
+                cur.execute(
+                    f"DELETE FROM customers WHERE customer_guid = '{guid}';")
+                conn.commit()
+
+                cur.execute("""SELECT * FROM customers;""")
+                fetch_customers = cur.fetchall()
+                print(fetch_customers)
+
+            return jsonify({'message': 'user successfully deleted'}), 200
 
     except Exception as e:
         print('error messag')
@@ -382,6 +437,34 @@ def ec():
         return jsonify({'message': str(e)}), 400
 
 
+@app.route('/ec2/instances', methods=['POST'])
+def ec_view_instances():
+
+    instance_list = []
+
+    guid = request.json['guid']
+    cur.execute(
+        f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
+    customer_aws_credentials = cur.fetchone()
+    print('fetch all customer credentials')
+    print(customer_aws_credentials)
+    print(customer_aws_credentials[5])
+    print(customer_aws_credentials[6])
+
+    ec2 = boto3.resource('ec2',
+                         aws_access_key_id=customer_aws_credentials[5],
+                         aws_secret_access_key=customer_aws_credentials[6],
+                         region_name='eu-west-2')
+
+    for instance in ec2.instances.all():
+        instance_list.append(instance.id)
+        print(instance.id)
+
+    print(instance_list)
+
+    return jsonify({'message': instance_list}), 200
+
+
 @app.route('/ec2/state', methods=['POST'])
 def ec_view_ec2state():
 
@@ -402,28 +485,6 @@ def ec_view_ec2state():
     print(response)
 
     return jsonify({'message': response}), 200
-
-
-@app.route('/ec2/instances', methods=['POST'])
-def ec_view_instances():
-    instance_list = []
-
-    existing_user = User.query.filter_by(guid=request.json['guid']).first()
-    print('user to filter out for EC2 Views')
-    print(existing_user)
-
-    ec2 = boto3.resource('ec2',
-                         aws_access_key_id=existing_user.access_id,
-                         aws_secret_access_key=existing_user.secret_id,
-                         region_name='eu-west-2')
-
-    for instance in ec2.instances.all():
-        instance_list.append(instance.id)
-        print(instance.id)
-
-    print(instance_list)
-
-    return jsonify({'message': instance_list}), 200
 
 
 @app.route('/ec2/stop', methods=['POST'])
