@@ -1,4 +1,7 @@
 from flask import Flask, jsonify, request
+from functions import add
+from routes import main, user
+
 from flask_cors import CORS
 
 from flask_sqlalchemy import SQLAlchemy
@@ -18,9 +21,14 @@ from json import JSONEncoder
 from dotenv import load_dotenv
 from db import conn, insert_user, update_user_iam
 
+result = add.add_it(1, 2)
+print(result)
 
 app = Flask(__name__)
+
+
 app.app_context().push()
+
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(dotenv_path='.env', verbose=True)
@@ -28,15 +36,6 @@ load_dotenv(dotenv_path='.env', verbose=True)
 CORS(app)
 
 cur = conn.cursor()
-
-# Database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
-    os.path.join(basedir, 'database.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# Init db
-db = SQLAlchemy(app)
-# Init ma
-ma = Marshmallow(app)
 
 admin_aws_access_key_id = os.getenv('admin_aws_access_key_id')
 admin_aws_secret_access_key = os.getenv('admin_aws_secret_access_key')
@@ -71,92 +70,12 @@ class Person:
         }.items()
 
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    access_token = db.Column(db.String(100))
-    name = db.Column(db.String(100))
-    email = db.Column(db.String(100), unique=True)
-    guid = db.Column(db.String(100))
-    photo = db.Column(db.String(100))
-    access_id = db.Column(db.String(100))
-    secret_id = db.Column(db.String(100))
-    ec2_instances = db.relationship('Ec2', backref='user')
+# @app.route('/', methods=['GET'])
+# def index():
+#     return jsonify('Route / says hello'), 200
 
-    def __init__(self, access_token, name, email, guid, photo, access_id, secret_id, ec2_instances):
-        self.access_token = access_token
-        self.name = name
-        self.email = email
-        self.guid = guid
-        self.photo = photo
-        self.access_id = access_id
-        self.secret_id = secret_id
-
-    def __repr__(self):
-        # rep = {"name": "some_name"}
-        rep = f"Hello, {self.name}. your instances are {self.ec2_instances}"
-        return rep
-
-
-class Ec2(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    instance_id = db.Column(db.Text)
-    user_id = db.Column(db.String(100), db.ForeignKey('user.email'))
-
-    def __init__(self, instance_id, user_id):
-        self.instance_id = instance_id
-        self.user_id = user_id
-
-    def __repr__(self):
-        return f'{self.instance_id}'
-
-
-# User Schema
-class UserSchema(ma.Schema):
-    class Meta:
-        fields = ('id', 'access_token', 'name', 'email', 'guid',
-                  'photo', 'access_id', 'secret_id', 'ec2_instances')
-
-
-class Ec2Schema(ma.Schema):
-    class Meta:
-        fields = ('id', 'instance_id', 'user_id')
-
-
-# Init schema
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
-
-ec2_schema = Ec2Schema()
-ec2s_schema = Ec2Schema(many=True)
-
-
-db.drop_all()
-db.create_all()
-
-
-@app.route('/', methods=['GET'])
-def home():
-
-    print('request.method')
-    print(request.method)
-    pathlib.Path(__file__).parent.resolve()
-    return jsonify({'message': 'Hello from Flask!'}), 200
-
-
-@app.route('/users', methods=['GET'])
-def get_user():
-    new_list = []
-    cur.execute("SELECT * FROM users;")
-    return_data = cur.fetchall()
-    print(return_data)
-
-    for i in return_data:
-        p1 = Person(i[0], i[1], i[2], i[3], i[4], i[5], i[6])
-        new_list.append(p1.__dict__)
-
-    print(new_list)
-
-    return jsonify({'users': new_list})
+app.register_blueprint(main.main)
+app.register_blueprint(user.users)
 
 
 @app.route('/user', methods=['POST'])

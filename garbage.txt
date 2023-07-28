@@ -1,0 +1,67 @@
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    access_token = db.Column(db.String(100))
+    name = db.Column(db.String(100))
+    email = db.Column(db.String(100), unique=True)
+    guid = db.Column(db.String(100))
+    photo = db.Column(db.String(100))
+    access_id = db.Column(db.String(100))
+    secret_id = db.Column(db.String(100))
+    ec2_instances = db.relationship('Ec2', backref='user')
+
+    def __init__(self, access_token, name, email, guid, photo, access_id, secret_id, ec2_instances):
+        self.access_token = access_token
+        self.name = name
+        self.email = email
+        self.guid = guid
+        self.photo = photo
+        self.access_id = access_id
+        self.secret_id = secret_id
+
+    def __repr__(self):
+        # rep = {"name": "some_name"}
+        rep = f"Hello, {self.name}. your instances are {self.ec2_instances}"
+        return rep
+
+class Ec2(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    instance_id = db.Column(db.Text)
+    user_id = db.Column(db.String(100), db.ForeignKey('user.email'))
+
+    def __init__(self, instance_id, user_id):
+        self.instance_id = instance_id
+        self.user_id = user_id
+
+    def __repr__(self):
+        return f'{self.instance_id}'
+
+# Database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
+    os.path.join(basedir, 'database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Init db
+db = SQLAlchemy(app)
+# Init ma
+ma = Marshmallow(app)
+
+# User Schema
+class UserSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'access_token', 'name', 'email', 'guid',
+                  'photo', 'access_id', 'secret_id', 'ec2_instances')
+
+
+class Ec2Schema(ma.Schema):
+    class Meta:
+        fields = ('id', 'instance_id', 'user_id')
+
+
+# Init schema
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+
+ec2_schema = Ec2Schema()
+ec2s_schema = Ec2Schema(many=True)
+
+db.drop_all()
+db.create_all()
