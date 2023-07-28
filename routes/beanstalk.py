@@ -11,7 +11,7 @@ admin_aws_secret_access_key = os.getenv('admin_aws_secret_access_key')
 beanstalk = Blueprint('beanstalk', __name__)
 
 
-@beanstalk.route('/beanstalk/environment', methods=['POST'])
+@beanstalk.route('/beanstalk/create-environment', methods=['GET'])
 def create_env():
     elasticbeanstalk = boto3.client('elasticbeanstalk',
                                     aws_access_key_id=admin_aws_access_key_id,

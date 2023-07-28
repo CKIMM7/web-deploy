@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug import exceptions
 
-from routes import main, user, iam, ec2, beanstalk
+from routes import main, user, iam, beanstalk, ec2
 from functions import add
 
 
@@ -15,6 +15,7 @@ app.register_blueprint(main.main)
 app.register_blueprint(user.users)
 app.register_blueprint(iam.iam)
 app.register_blueprint(ec2.ec2)
+app.register_blueprint(beanstalk.beanstalk)
 
 CORS(app)
 
