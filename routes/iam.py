@@ -74,3 +74,55 @@ def iam_new_user():
         print('error messag')
         print(str(e))
         return jsonify({'message': str(e)}), 400
+
+
+@iam.route('/iam/delete_key', methods=['POST'])
+def iam_delete_access_key():
+    print('/iam/delete_key')
+
+    guid = request.json['guid']
+    print(guid)
+    cur.execute(f"SELECT * FROM users WHERE user_guid = '{guid}';")
+    existing_user = cur.fetchone()
+
+    print(existing_user[1].replace(" ", "_").lower())
+
+    # authenticat with admin permissions
+    iam = boto3.client('iam',
+                       aws_access_key_id=admin_aws_access_key_id,
+                       aws_secret_access_key=admin_aws_secret_access_key,
+                       region_name='eu-west-2')
+
+    try:
+        access_key_response = iam.delete_access_key(
+            UserName=existing_user[1].replace(" ", "_").lower(),
+            AccessKeyId=existing_user[5])
+        print(access_key_response)
+
+        if access_key_response:
+
+            remove_user_from_group_response = iam.remove_user_from_group(
+                GroupName='student',
+                UserName=existing_user[1].replace(" ", "_").lower()
+            )
+            print(remove_user_from_group_response)
+
+            if remove_user_from_group_response:
+                delete_user_response = iam.delete_user(
+                    UserName=existing_user[1].replace(" ", "_").lower()
+                )
+                print(delete_user_response)
+                cur.execute(
+                    f"DELETE FROM users WHERE user_guid = '{guid}';")
+                conn.commit()
+
+                cur.execute("""SELECT * FROM users;""")
+                fetch_users = cur.fetchall()
+                print(fetch_users)
+
+            return jsonify({'message': 'user successfully deleted'}), 200
+
+    except Exception as e:
+        print('error messag')
+        print(str(e))
+        return jsonify({'message': str(e)}), 400
