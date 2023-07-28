@@ -30,9 +30,6 @@ CORS(app)
 
 cur = conn.cursor()
 
-admin_aws_access_key_id = os.getenv('admin_aws_access_key_id')
-admin_aws_secret_access_key = os.getenv('admin_aws_secret_access_key')
-
 
 if __name__ == "__main__":
     app.run(debug=True)
