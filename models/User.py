@@ -1,4 +1,4 @@
-class Person:
+class User:
     def __init__(self, id, name, email, guid, photo, access_id, secret_id):
         self.id = id
         self.name = name
