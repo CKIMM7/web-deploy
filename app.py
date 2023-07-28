@@ -25,11 +25,7 @@ result = add.add_it(1, 2)
 print(result)
 
 app = Flask(__name__)
-
-
 app.app_context().push()
-
-
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(dotenv_path='.env', verbose=True)
 
@@ -70,10 +66,6 @@ class Person:
         }.items()
 
 
-# @app.route('/', methods=['GET'])
-# def index():
-#     return jsonify('Route / says hello'), 200
-
 app.register_blueprint(main.main)
 app.register_blueprint(user.users)
 
@@ -90,7 +82,7 @@ def add_User():
 
     # look into iam not my own database
 
-    cur.execute(f"SELECT * FROM customers WHERE customer_email = '{email}';")
+    cur.execute(f"SELECT * FROM users WHERE user_email = '{email}';")
     existing_user = cur.fetchone()
     print(existing_user)
 
@@ -99,7 +91,7 @@ def add_User():
         print('user does not exist, creating user')
         insert_user(name, email, guid, photo,  '', '')
         cur.execute(
-            f"SELECT * FROM customers WHERE customer_email = '{email}';")
+            f"SELECT * FROM users WHERE user_email = '{email}';")
         new_user = cur.fetchone()
 
         print('return newly created')
@@ -134,7 +126,7 @@ def add_User():
 def iam_new_user():
 
     guid = request.json['guid']
-    cur.execute(f"SELECT * FROM customers WHERE customer_name = '{guid}';")
+    cur.execute(f"SELECT * FROM users WHERE user_name = '{guid}';")
     existing_user = cur.fetchone()
     print(existing_user)
 
@@ -178,7 +170,7 @@ def iam_new_user():
             # print(response)
 
         update_user_iam(AccessKeyId, SecretAccessKey, guid)
-        cur.execute(f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
+        cur.execute(f"SELECT * FROM users WHERE user_guid = '{guid}';")
         existing_user = cur.fetchone()
         print('existing_user after update')
         p1 = Person(existing_user[0], existing_user[1], existing_user[2],
@@ -198,7 +190,7 @@ def iam_delete_access_key():
 
     guid = request.json['guid']
     print(guid)
-    cur.execute(f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
+    cur.execute(f"SELECT * FROM users WHERE user_guid = '{guid}';")
     existing_user = cur.fetchone()
 
     print(existing_user[1].replace(" ", "_").lower())
@@ -229,12 +221,12 @@ def iam_delete_access_key():
                 )
                 print(delete_user_response)
                 cur.execute(
-                    f"DELETE FROM customers WHERE customer_guid = '{guid}';")
+                    f"DELETE FROM users WHERE user_guid = '{guid}';")
                 conn.commit()
 
-                cur.execute("""SELECT * FROM customers;""")
-                fetch_customers = cur.fetchall()
-                print(fetch_customers)
+                cur.execute("""SELECT * FROM users;""")
+                fetch_users = cur.fetchall()
+                print(fetch_users)
 
             return jsonify({'message': 'user successfully deleted'}), 200
 
@@ -272,12 +264,12 @@ def ec():
 
     guid = request.json['guid']
     cur.execute(
-        f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
-    customer_aws_credentials = cur.fetchone()
-    print('fetch all customer credentials')
-    print(customer_aws_credentials)
-    print(customer_aws_credentials[5])
-    print(customer_aws_credentials[6])
+        f"SELECT * FROM users WHERE user_guid = '{guid}';")
+    user_aws_credentials = cur.fetchone()
+    print('fetch all user credentials')
+    print(user_aws_credentials)
+    print(user_aws_credentials[5])
+    print(user_aws_credentials[6])
 
     print(request.json['repo'])
 
@@ -319,8 +311,8 @@ def ec():
 
     try:
         ec2 = boto3.resource('ec2',
-                             aws_access_key_id=customer_aws_credentials[5],
-                             aws_secret_access_key=customer_aws_credentials[6],
+                             aws_access_key_id=user_aws_credentials[5],
+                             aws_secret_access_key=user_aws_credentials[6],
                              region_name='eu-west-2')
 
         instance = ec2.create_instances(
@@ -339,12 +331,12 @@ def ec():
         print(instance)
         print(f"{instance[0].id}")
 
-        cur.execute("INSERT INTO ec2s (customer_id, ec2_name) VALUES (%s, %s)",
-                    (customer_aws_credentials[0], f"{instance[0].id}"))
+        cur.execute("INSERT INTO ec2s (user_id, ec2_name) VALUES (%s, %s)",
+                    (user_aws_credentials[0], f"{instance[0].id}"))
         conn.commit()
 
         cur.execute(
-            """SELECT customers.customer_id, customers.customer_name, ec2_name FROM customers INNER JOIN ec2s ON ec2s.customer_id = customers.customer_id WHERE customers.customer_email = 'dyounggkim@gmail.com';""")
+            """SELECT users.user_id, users.user_name, ec2_name FROM users INNER JOIN ec2s ON ec2s.user_id = users.user_id WHERE users.user_email = 'dyounggkim@gmail.com';""")
         join_sql_kim = cur.fetchall()
         print(join_sql_kim)
 
@@ -363,16 +355,16 @@ def ec_view_instances():
 
     guid = request.json['guid']
     cur.execute(
-        f"SELECT * FROM customers WHERE customer_guid = '{guid}';")
-    customer_aws_credentials = cur.fetchone()
-    print('fetch all customer credentials')
-    print(customer_aws_credentials)
-    print(customer_aws_credentials[5])
-    print(customer_aws_credentials[6])
+        f"SELECT * FROM users WHERE user_guid = '{guid}';")
+    user_aws_credentials = cur.fetchone()
+    print('fetch all user credentials')
+    print(user_aws_credentials)
+    print(user_aws_credentials[5])
+    print(user_aws_credentials[6])
 
     ec2 = boto3.resource('ec2',
-                         aws_access_key_id=customer_aws_credentials[5],
-                         aws_secret_access_key=customer_aws_credentials[6],
+                         aws_access_key_id=user_aws_credentials[5],
+                         aws_secret_access_key=user_aws_credentials[6],
                          region_name='eu-west-2')
 
     for instance in ec2.instances.all():
