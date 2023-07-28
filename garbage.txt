@@ -65,3 +65,7 @@ ec2s_schema = Ec2Schema(many=True)
 
 db.drop_all()
 db.create_all()
+
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(dotenv_path='.env', verbose=True)
