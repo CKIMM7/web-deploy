@@ -12,7 +12,6 @@ cur = conn.cursor()
 User = User.User
 
 users = Blueprint('users', __name__)
-# user = Blueprint('user', __name__)
 
 
 @users.route('/users', methods=['GET'])
@@ -71,11 +70,6 @@ def add_User():
                            aws_access_key_id=admin_aws_access_key_id,
                            aws_secret_access_key=admin_aws_secret_access_key,
                            region_name='eu-west-2')
-
-        # response = iam.get_user(
-        #     UserName='Dong_Young_Kim')
-
-        # print(response)
 
         p1 = User(existing_user[0], existing_user[1], existing_user[2],
                   existing_user[3], existing_user[4], existing_user[5], existing_user[6])
